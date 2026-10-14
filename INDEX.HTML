@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ServicioSocialPro v3.8 - Control, Bitácora & Módulos Integrados</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.88);
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(229, 231, 235, 0.8);
+        }
+        .dark .glass-card {
+            background: rgba(30, 41, 59, 0.88);
+            border: 1px solid rgba(51, 65, 85, 0.8);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(156, 163, 175, 0.5);
+            border-radius: 4px;
+        }
+        .nav-btn.active {
+            background-color: #0284c7;
+            color: #ffffff !important;
+            box-shadow: 0 4px 6px -1px rgba(2, 132, 199, 0.3);
+        }
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background: white !important; color: black !important; }
+            .shadow-xl, .shadow-lg, .shadow-md, .shadow-sm { box-shadow: none !important; }
+            .glass-card { background: white !important; border: 1px solid #ccc !important; }
+            #viewDashboard, #viewGallery, #viewConfig { display: block !important; }
+        }
+    </style>
+</head>
+<body class="h-full text-slate-800 dark:text-slate-100 dark:bg-slate-900 transition-colors duration-200 custom-scrollbar">
+
+    <div id="app" class="min-h-full flex flex-col">
+        <!-- Navigation Bar / Dynamic Header -->
+        <header class="no-print bg-white/80 dark:bg-slate-800/80 sticky top-0 z-40 backdrop-blur-md border-b border-slate-200 dark:border-slate-700">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                
+                <div class="flex items-center space-x-3 cursor-pointer" onclick="switchView('dashboard')">
+                    <div class="bg-gradient-to-tr from-sky-600 to-indigo-600 p-2.5 rounded-xl text-white shadow-md">
+                        <i class="fa-solid fa-user-graduate text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-lg leading-tight bg-gradient-to-r from-sky-600 to-indigo-600 bg-clip-text text-transparent">ServicioSocialPro</h1>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Control Decimal, Bitácora & Módulos Completos</p>
+                    </div>
+                </div>
+
+                <!-- Main View Tabs Navigation -->
+                <nav class="hidden md:flex items-center space-x-1 bg-slate-100 dark:bg-slate-700/50 p-1 rounded-xl">
+                    <button onclick="switchView('dashboard')" id="navDashboard" class="nav-btn active px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 transition flex items-center gap-2">
+                        <i class="fa-solid fa-chart-pie"></i> Bitácora Principal
+                    </button>
+                    <button onclick="switchView('gallery')" id="navGallery" class="nav-btn px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 transition flex items-center gap-2 relative">
+                        <i class="fa-solid fa-images"></i> Galería de Evidencias
+                        <span id="galleryBadgeNav" class="bg-sky-600 text-white text-[10px] px-1.5 py-0.2 rounded-full hidden">0</span>
+                    </button>
+                    <button onclick="switchView('config')" id="navConfig" class="nav-btn px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 transition flex items-center gap-2">
+                        <i class="fa-solid fa-sliders"></i> Datos Institucionales
+                    </button>
+                </nav>
+
+                <!-- Actions & Dark Mode -->
+                <div class="flex items-center space-x-2 sm:space-x-3">
+                    <button id="themeToggleBtn" title="Cambiar Tema" class="p-2.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                        <i class="fa-solid fa-moon dark:hidden"></i>
+                        <i class="fa-solid fa-sun hidden dark:block text-amber-400"></i>
+                    </button>
+
+                    <button id="exportBackupBtn" title="Exportar Respaldo JSON" class="p-2.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                        <i class="fa-solid fa-download"></i>
+                    </button>
+
+                    <button id="printReportBtn" class="bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-xl text-sm font-medium shadow-sm transition flex items-center gap-2">
+                        <i class="fa-solid fa-print"></i>
+                        <span class="hidden sm:inline">Reporte Oficial</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mobile Sub-Navigation -->
+            <div class="md:hidden border-t border-slate-200 dark:border-slate-700 px-4 py-2 flex justify-around bg-slate-50 dark:bg-slate-800">
+                <button onclick="switchView('dashboard')" id="navDashboardMob" class="text-xs font-semibold text-sky-600 dark:text-sky-400 flex items-center gap-1 py-1">
+                    <i class="fa-solid fa-chart-pie"></i> Bitácora
+                </button>
+                <button onclick="switchView('gallery')" id="navGalleryMob" class="text-xs font-semibold text-slate-500 flex items-center gap-1 py-1">
+                    <i class="fa-solid fa-images"></i> Evidencias
+                </button>
+                <button onclick="switchView('config')" id="navConfigMob" class="text-xs font-semibold text-slate-500 flex items-center gap-1 py-1">
+                    <i class="fa-solid fa-sliders"></i> Datos
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content Wrapper -->
+        <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+            <!-- ================= INTERFAZ 1: BITÁCORA PRINCIPAL ================= -->
+            <div id="viewDashboard" class="space-y-6">
+                <!-- Stat Cards -->
+                <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="glass-card rounded-2xl p-4 flex items-center justify-between shadow-sm">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Meta Total</p>
+                            <div class="flex items-baseline gap-1 mt-1">
+                                <input type="number" id="targetHoursInput" value="480" step="any" min="1" class="text-2xl font-bold bg-transparent w-24 focus:ring-1 focus:ring-sky-500 rounded px-1 text-slate-900 dark:text-white">
+                                <span class="text-xs text-slate-500">hrs</span>
+                            </div>
+                        </div>
+                        <div class="w-12 h-12 rounded-xl bg-sky-100 dark:bg-sky-900/40 text-sky-600 dark:text-sky-400 flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-bullseye"></i>
+                        </div>
+                    </div>
+
+                    <div class="glass-card rounded-2xl p-4 flex items-center justify-between shadow-sm">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Completadas</p>
+                            <h3 id="completedHoursText" class="text-2xl font-bold text-slate-900 dark:text-white mt-1">0.00 <span class="text-xs font-normal text-slate-500">hrs</span></h3>
+                        </div>
+                        <div class="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-clock-check"></i>
+                        </div>
+                    </div>
+
+                    <div class="glass-card rounded-2xl p-4 flex items-center justify-between shadow-sm">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Restantes</p>
+                            <h3 id="remainingHoursText" class="text-2xl font-bold text-slate-900 dark:text-white mt-1">480.00 <span class="text-xs font-normal text-slate-500">hrs</span></h3>
+                        </div>
+                        <div class="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-hourglass-half"></i>
+                        </div>
+                    </div>
+
+                    <div class="glass-card rounded-2xl p-4 flex items-center justify-between shadow-sm">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Progreso</p>
+                            <h3 id="progressPercentText" class="text-2xl font-bold text-slate-900 dark:text-white mt-1">0%</h3>
+                        </div>
+                        <div class="w-12 h-12 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-trophy"></i>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Form & Cronometer Grid -->
+                <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Form -->
+                    <div class="lg:col-span-2 glass-card rounded-2xl p-6 shadow-sm space-y-5">
+                        <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-4">
+                            <h2 class="font-bold text-lg flex items-center gap-2">
+                                <i id="formIcon" class="fa-solid fa-pen-to-square text-sky-600"></i> 
+                                <span id="formTitle">Registrar Jornada / Horas Exactas</span>
+                            </h2>
+                            <div class="flex items-center gap-2">
+                                <span id="editBadge" class="hidden text-xs bg-amber-500 text-white font-semibold px-2 py-0.5 rounded-md">
+                                    Modo Edición
+                                </span>
+                                <span id="liveClock" class="text-sm font-mono bg-slate-100 dark:bg-slate-700 px-3 py-1 rounded-lg text-slate-600 dark:text-slate-300">
+                                    00:00:00 AM
+                                </span>
+                            </div>
+                        </div>
+
+                        <form id="entryForm" class="space-y-4">
+                            <input type="hidden" id="editingLogId" value="">
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Fecha de Registro</label>
+                                    <input type="date" id="logDate" required class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-sky-500">
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Tipo de Actividad</label>
+                                    <select id="logCategory" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-sky-500">
+                                        <option value="Presencial">Presencial</option>
+                                        <option value="Remoto">Remoto / Home Office</option>
+                                        <option value="Campo / Evento">Campo / Evento</option>
+                                        <option value="Investigación">Investigación / Documentación</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                                <div>
+                                    <div class="flex justify-between items-center mb-1">
+                                        <label class="text-xs font-medium text-slate-600 dark:text-slate-300">Hora Entrada</label>
+                                        <button type="button" id="setNowStartBtn" class="text-[10px] text-sky-600 hover:underline font-semibold">Ahora (+4h aut.)</button>
+                                    </div>
+                                    <input type="time" id="startTime" class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm">
+                                </div>
+
+                                <div>
+                                    <div class="flex justify-between items-center mb-1">
+                                        <label class="text-xs font-medium text-slate-600 dark:text-slate-300">Hora Salida</label>
+                                        <button type="button" id="setNowEndBtn" class="text-[10px] text-sky-600 hover:underline font-semibold">Ahora</button>
+                                    </div>
+                                    <input type="time" id="endTime" class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm">
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Horas Totales (Decimal Libre)</label>
+                                    <input type="number" id="calculatedHours" step="any" min="0.01" placeholder="Ej: 3.25, 4.18" required class="w-full bg-white dark:bg-slate-800 border border-sky-300 dark:border-sky-600 rounded-lg px-3 py-1.5 text-sm font-bold text-sky-600 dark:text-sky-400">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Descripción de Actividades Realizadas</label>
+                                <textarea id="logActivities" rows="2" placeholder="Detalla las tareas desempeñadas..." required class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-sky-500"></textarea>
+                            </div>
+
+                            <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
+                                <div class="flex items-center gap-2">
+                                    <button type="button" id="getGpsBtn" class="px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-xs font-medium rounded-lg text-slate-700 dark:text-slate-300 flex items-center gap-1.5 transition">
+                                        <i class="fa-solid fa-location-dot text-rose-500"></i> <span id="gpsStatus">Obtener GPS</span>
+                                    </button>
+                                    <input type="hidden" id="gpsData">
+
+                                    <label class="cursor-pointer px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-xs font-medium rounded-lg text-slate-700 dark:text-slate-300 flex items-center gap-1.5 transition">
+                                        <i class="fa-solid fa-camera text-indigo-500"></i> Adjuntar Foto
+                                        <input type="file" id="evidenceFile" accept="image/*" capture="environment" class="hidden">
+                                    </label>
+                                    <span id="evidenceStatus" class="text-xs text-emerald-600 dark:text-emerald-400 font-medium hidden">
+                                        <i class="fa-solid fa-circle-check"></i> Foto OK
+                                    </span>
+                                </div>
+
+                                <div class="flex items-center gap-2">
+                                    <button type="button" id="cancelEditBtn" class="hidden px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-xl transition">
+                                        Cancelar Edición
+                                    </button>
+                                    <button type="submit" id="submitBtn" class="bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-700 hover:to-indigo-700 text-white font-medium px-6 py-2 rounded-xl text-sm shadow-md transition flex items-center gap-2">
+                                        <i class="fa-solid fa-plus-circle" id="submitBtnIcon"></i> <span id="submitBtnText">Guardar Registro</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Stopwatch & Achievements Side -->
+                    <div class="space-y-6">
+                        <div class="glass-card rounded-2xl p-6 shadow-sm border border-sky-100 dark:border-sky-900/30">
+                            <h3 class="font-bold text-sm text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Cronómetro de Jornada</h3>
+                            
+                            <div class="space-y-3 mb-4">
+                                <div>
+                                    <div class="flex justify-between items-center mb-1">
+                                        <label class="text-xs font-medium text-slate-600 dark:text-slate-300">Hora Inicio Reloj</label>
+                                        <button type="button" id="setClockStartNow" class="text-[10px] text-sky-600 hover:underline">Usar Hora Actual</button>
+                                    </div>
+                                    <input type="time" id="clockStartTime" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1 text-xs">
+                                </div>
+                                <div class="text-[11px] text-slate-500 flex justify-between">
+                                    <span>Hora Fin Estimada (4h):</span>
+                                    <span id="clockEstimatedEnd" class="font-bold text-sky-600">--:--</span>
+                                </div>
+                            </div>
+
+                            <div class="text-center py-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700">
+                                <div id="stopwatchDisplay" class="text-4xl font-mono font-bold text-slate-800 dark:text-slate-100 tracking-tight transition-colors duration-300">00:00:00</div>
+                                <p id="stopwatchDecimal" class="text-xs text-sky-600 dark:text-sky-400 font-semibold mt-1">0.00 hrs acumuladas</p>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-2 mt-4">
+                                <button id="startTimerBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition">
+                                    <i class="fa-solid fa-play"></i> Iniciar
+                                </button>
+                                <button id="stopTimerBtn" disabled class="bg-rose-600 hover:bg-rose-700 text-white py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition disabled:opacity-50">
+                                    <i class="fa-solid fa-stop"></i> Detener
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="glass-card rounded-2xl p-6 shadow-sm">
+                            <h3 class="font-bold text-sm text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Insignias</h3>
+                            <div class="grid grid-cols-4 gap-2 text-center" id="badgesContainer"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Calendar & Analytics -->
+                <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="glass-card rounded-2xl p-6 shadow-sm">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="font-bold text-sm text-slate-500 dark:text-slate-400 uppercase tracking-wider">Calendario de Asistencia</h3>
+                            <span id="calendarMonthYear" class="text-xs font-bold text-sky-600">--</span>
+                        </div>
+                        <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-semibold text-slate-400 mb-1">
+                            <div>L</div><div>M</div><div>M</div><div>J</div><div>V</div><div>S</div><div>D</div>
+                        </div>
+                        <div id="calendarGrid" class="grid grid-cols-7 gap-1 text-center text-xs"></div>
+                    </div>
+
+                    <div class="glass-card rounded-2xl p-6 shadow-sm">
+                        <h3 class="font-bold text-base mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-line text-sky-600"></i> Distribución de Horas
+                        </h3>
+                        <div class="relative h-52">
+                            <canvas id="hoursChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="glass-card rounded-2xl p-6 shadow-sm space-y-3 flex flex-col justify-between">
+                        <h3 class="font-bold text-sm text-slate-500 dark:text-slate-400 uppercase tracking-wider">Métricas de Rendimiento</h3>
+                        <div class="space-y-2 text-xs">
+                            <div class="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
+                                <span class="text-slate-500">Promedio por Registro:</span>
+                                <span id="statAvgHours" class="font-bold">0.00 hrs</span>
+                            </div>
+                            <div class="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
+                                <span class="text-slate-500">Días Laborados:</span>
+                                <span id="statDaysWorked" class="font-bold">0 días</span>
+                            </div>
+                            <div class="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
+                                <span class="text-slate-500">Jornadas de 4h+:</span>
+                                <span id="statFullSessions" class="font-bold text-emerald-600">0</span>
+                            </div>
+                            <div class="flex justify-between py-1.5">
+                                <span class="text-slate-500">Días Restantes Est. (4h/día):</span>
+                                <span id="statEstDaysLeft" class="font-bold text-amber-600">0 días</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Full Table -->
+                <section class="glass-card rounded-2xl p-6 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-bold text-base flex items-center gap-2">
+                            <i class="fa-solid fa-list-check text-sky-600"></i> Historial Completo de Bitácora
+                        </h3>
+                        <div class="flex items-center gap-3">
+                            <input type="text" id="tableSearchInput" placeholder="Buscar actividad..." class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1 text-xs focus:ring-1 focus:ring-sky-500">
+                            <button id="clearAllLogsBtn" class="text-xs text-rose-500 hover:underline font-medium">Limpiar Todo</button>
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs border-collapse">
+                            <thead>
+                                <tr class="border-b border-slate-200 dark:border-slate-700 text-slate-500">
+                                    <th class="py-2.5 px-3">Fecha</th>
+                                    <th class="py-2.5 px-3">Tipo</th>
+                                    <th class="py-2.5 px-3">Horario</th>
+                                    <th class="py-2.5 px-3 text-right">Horas Total</th>
+                                    <th class="py-2.5 px-3">Descripción de Actividades</th>
+                                    <th class="py-2.5 px-3 text-center">Ubicación / Adjunto</th>
+                                    <th class="py-2.5 px-3 text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="logsTableBody" class="divide-y divide-slate-100 dark:divide-slate-800"></tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            <!-- ================= INTERFAZ 2: GALERÍA COMPLETA DE EVIDENCIAS ================= -->
+            <div id="viewGallery" class="hidden space-y-6">
+                <div class="glass-card rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200 dark:border-slate-700 pb-4 mb-6">
+                        <div>
+                            <h2 class="text-xl font-bold flex items-center gap-2">
+                                <i class="fa-solid fa-images text-sky-600"></i> Galería Completa de Evidencias Fotografícas
+                            </h2>
+                            <p class="text-xs text-slate-500 mt-1">Colección de fotografías, comprobantes y respaldos vinculados a tus asistencias.</p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span id="galleryCounterText" class="text-xs font-semibold bg-sky-100 dark:bg-sky-900/50 text-sky-700 dark:text-sky-300 px-3 py-1.5 rounded-xl">0 Evidencias</span>
+                            <button onclick="switchView('dashboard')" class="bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-xs font-semibold px-4 py-2 rounded-xl transition">
+                                <i class="fa-solid fa-arrow-left mr-1"></i> Volver a Bitácora
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="galleryFullGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                        <!-- Dynamic full gallery -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= INTERFAZ 3: CONFIGURACIÓN INSTITUCIONAL ================= -->
+            <div id="viewConfig" class="hidden space-y-6 max-w-4xl mx-auto">
+                <div class="glass-card rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 space-y-6">
+                    <div class="flex justify-between items-center border-b border-slate-200 dark:border-slate-700 pb-4">
+                        <div>
+                            <h2 class="text-xl font-bold flex items-center gap-2">
+                                <i class="fa-solid fa-sliders text-sky-600"></i> Módulo de Datos Institucionales
+                            </h2>
+                            <p class="text-xs text-slate-500 mt-1">Configura tus datos oficiales para la generación automática de reportes de firmas.</p>
+                        </div>
+                        <button onclick="switchView('dashboard')" class="bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-xs font-semibold px-4 py-2 rounded-xl transition">
+                            <i class="fa-solid fa-arrow-left mr-1"></i> Volver a Bitácora
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+                        <div class="space-y-2">
+                            <label class="block font-medium text-slate-700 dark:text-slate-300">Nombre Completo del Alumno / Prestador</label>
+                            <input type="text" id="cfgStudentName" placeholder="Ej. Juan Pérez" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl px-4 py-2.5">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="block font-medium text-slate-700 dark:text-slate-300">Matrícula / Folio Oficial</label>
+                            <input type="text" id="cfgStudentId" placeholder="Ej. 202400123" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl px-4 py-2.5">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="block font-medium text-slate-700 dark:text-slate-300">Programa / Dependencia de Adscripción</label>
+                            <input type="text" id="cfgProgram" placeholder="Ej. Dirección de Innovación Tecnológica" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl px-4 py-2.5">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="block font-medium text-slate-700 dark:text-slate-300">Nombre del Supervisor Directo</label>
+                            <input type="text" id="cfgSupervisor" placeholder="Ej. Ing. Carlos Gómez" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl px-4 py-2.5">
+                        </div>
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-end">
+                        <button id="saveConfigBtn" class="bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-700 hover:to-indigo-700 text-white font-semibold px-8 py-3 rounded-xl text-sm shadow-md transition flex items-center gap-2">
+                            <i class="fa-solid fa-floppy-disk"></i> Guardar Configuración Institucional
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- Official Printable Report Section -->
+        <section id="printableReport" class="hidden print:block p-8 bg-white text-black font-sans">
+            <div class="border-b-2 border-slate-900 pb-4 mb-6 flex justify-between items-center">
+                <div>
+                    <h1 class="text-2xl font-bold uppercase tracking-wide">Reporte Oficial de Servicio Social</h1>
+                    <p class="text-xs text-slate-600">Control de Horas Acumuladas y Bitácora de Actividades</p>
+                </div>
+                <div class="text-right text-xs">
+                    <p class="font-bold" id="printReportDate">Fecha: DD/MM/AAAA</p>
+                    <p class="text-slate-500">Documento Oficial de Control</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 text-xs mb-6 border p-4 rounded-lg bg-slate-50">
+                <div>
+                    <p><strong>Alumno / Prestador:</strong> <span id="printStudentName" class="border-b border-dotted border-slate-400 px-1">______________________</span></p>
+                    <p class="mt-1"><strong>Matrícula / Folio:</strong> <span id="printStudentId" class="border-b border-dotted border-slate-400 px-1">______________________</span></p>
+                </div>
+                <div>
+                    <p><strong>Programa / Dependencia:</strong> <span id="printProgram" class="border-b border-dotted border-slate-400 px-1">______________________</span></p>
+                    <p class="mt-1"><strong>Total Horas Registradas:</strong> <span id="printTotalHours" class="font-bold text-sm">0.00 hrs</span></p>
+                </div>
+            </div>
+
+            <table class="w-full text-left text-xs border-collapse mb-8 border border-slate-300">
+                <thead>
+                    <tr class="bg-slate-100 border-b border-slate-300">
+                        <th class="p-2 border-r">Fecha</th>
+                        <th class="p-2 border-r">Tipo</th>
+                        <th class="p-2 border-r">Horario</th>
+                        <th class="p-2 border-r text-right">Horas</th>
+                        <th class="p-2 border-r">Descripción</th>
+                        <th class="p-2">GPS / Foto</th>
+                    </tr>
+                </thead>
+                <tbody id="printTableBody"></tbody>
+            </table>
+
+            <div class="grid grid-cols-2 gap-12 pt-16 text-center text-xs">
+                <div>
+                    <div class="border-t border-slate-800 pt-2 font-bold" id="printSignatureStudent">Firma del Alumno / Prestador</div>
+                    <p class="text-[10px] text-slate-500">Prestador de Servicio Social</p>
+                </div>
+                <div>
+                    <div class="border-t border-slate-800 pt-2 font-bold" id="printSignatureSupervisor">Sello y Firma del Responsable</div>
+                    <p class="text-[10px] text-slate-500">Supervisión / Dependencia</p>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- Application Script Logic -->
+    <script>
+        let logs = JSON.parse(localStorage.getItem('servicio_social_logs') || '[]');
+        let targetHours = parseFloat(localStorage.getItem('servicio_social_target') || '480');
+        let instConfig = JSON.parse(localStorage.getItem('servicio_social_config') || '{"name":"","id":"","program":"","supervisor":""}');
+        
+        // Timer Persistent State Variables
+        let timerData = JSON.parse(localStorage.getItem('servicio_social_timer') || 'null');
+        let stopwatchInterval = null;
+        let stopwatchSeconds = 0;
+        
+        let hoursChart = null;
+        let currentEvidenceBase64 = '';
+
+        // DOM Inputs
+        const targetHoursInput = document.getElementById('targetHoursInput');
+        const completedHoursText = document.getElementById('completedHoursText');
+        const remainingHoursText = document.getElementById('remainingHoursText');
+        const progressPercentText = document.getElementById('progressPercentText');
+        
+        const editingLogId = document.getElementById('editingLogId');
+        const formTitle = document.getElementById('formTitle');
+        const formIcon = document.getElementById('formIcon');
+        const editBadge = document.getElementById('editBadge');
+        const submitBtnText = document.getElementById('submitBtnText');
+        const submitBtnIcon = document.getElementById('submitBtnIcon');
+        const cancelEditBtn = document.getElementById('cancelEditBtn');
+
+        const logDate = document.getElementById('logDate');
+        const logCategory = document.getElementById('logCategory');
+        const startTime = document.getElementById('startTime');
+        const endTime = document.getElementById('endTime');
+        const calculatedHours = document.getElementById('calculatedHours');
+        const logActivities = document.getElementById('logActivities');
+        
+        const entryForm = document.getElementById('entryForm');
+        const logsTableBody = document.getElementById('logsTableBody');
+        const printTableBody = document.getElementById('printTableBody');
+
+        const clockStartTime = document.getElementById('clockStartTime');
+        const clockEstimatedEnd = document.getElementById('clockEstimatedEnd');
+
+        window.onload = function() {
+            logDate.value = new Date().toISOString().split('T')[0];
+            targetHoursInput.value = targetHours;
+            clockStartTime.value = getCurrentTimeString();
+            updateClockEstimatedEnd();
+
+            loadInstitutionalConfig();
+            initEventListeners();
+            updateCalculations();
+            renderLogs();
+            initChart();
+            renderBadges();
+            renderCalendarHeatmap();
+            updateLiveClock();
+
+            setInterval(updateLiveClock, 1000);
+
+            // Verificar y reanudar el cronómetro si estaba activo antes de recargar
+            checkAndRestoreTimer();
+        };
+
+        // Solicitar permiso para notificaciones del sistema si están soportadas
+        if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
+            Notification.requestPermission();
+        }
+
+        // Listener para prevenir cierres/recargas accidentales con el reloj encendido
+        window.addEventListener('beforeunload', (e) => {
+            if (timerData) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+
+        // Listener para sincronizar estado entre pestañas
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'servicio_social_timer') {
+                timerData = JSON.parse(e.newValue || 'null');
+                if (!timerData) {
+                    if (stopwatchInterval) clearInterval(stopwatchInterval);
+                    document.getElementById('startTimerBtn').disabled = false;
+                    document.getElementById('stopTimerBtn').disabled = true;
+                    document.getElementById('stopwatchDisplay').textContent = '00:00:00';
+                    document.getElementById('stopwatchDisplay').classList.remove('text-emerald-500');
+                    document.getElementById('stopwatchDecimal').textContent = '0.00 hrs acumuladas';
+                } else {
+                    startStopwatch();
+                }
+            }
+        });
+
+        // Navigation View Switcher (SPA)
+        function switchView(viewName) {
+            document.getElementById('viewDashboard').classList.add('hidden');
+            document.getElementById('viewGallery').classList.add('hidden');
+            document.getElementById('viewConfig').classList.add('hidden');
+
+            document.getElementById('navDashboard').classList.remove('active');
+            document.getElementById('navGallery').classList.remove('active');
+            document.getElementById('navConfig').classList.remove('active');
+
+            if (viewName === 'dashboard') {
+                document.getElementById('viewDashboard').classList.remove('hidden');
+                document.getElementById('navDashboard').classList.add('active');
+            } else if (viewName === 'gallery') {
+                document.getElementById('viewGallery').classList.remove('hidden');
+                document.getElementById('navGallery').classList.add('active');
+                renderFullGalleryView();
+            } else if (viewName === 'config') {
+                document.getElementById('viewConfig').classList.remove('hidden');
+                document.getElementById('navConfig').classList.add('active');
+            }
+        }
+
+        function initEventListeners() {
+            document.getElementById('themeToggleBtn').addEventListener('click', () => {
+                document.documentElement.classList.toggle('dark');
+            });
+
+            targetHoursInput.addEventListener('input', (e) => {
+                targetHours = parseFloat(e.target.value) || 0;
+                localStorage.setItem('servicio_social_target', targetHours);
+                updateCalculations();
+                renderBadges();
+            });
+
+            startTime.addEventListener('input', () => {
+                if (startTime.value && !endTime.value) {
+                    endTime.value = addHoursToTimeString(startTime.value, 4);
+                }
+                calculateHoursFromTimes();
+            });
+
+            endTime.addEventListener('input', calculateHoursFromTimes);
+
+            document.getElementById('setNowStartBtn').addEventListener('click', () => {
+                const now = getCurrentTimeString();
+                startTime.value = now;
+                endTime.value = addHoursToTimeString(now, 4);
+                calculateHoursFromTimes();
+            });
+
+            document.getElementById('setNowEndBtn').addEventListener('click', () => {
+                endTime.value = getCurrentTimeString();
+                calculateHoursFromTimes();
+            });
+
+            clockStartTime.addEventListener('input', updateClockEstimatedEnd);
+            document.getElementById('setClockStartNow').addEventListener('click', () => {
+                clockStartTime.value = getCurrentTimeString();
+                updateClockEstimatedEnd();
+            });
+
+            entryForm.addEventListener('submit', handleFormSubmit);
+            cancelEditBtn.addEventListener('click', resetForm);
+
+            document.getElementById('clearAllLogsBtn').addEventListener('click', () => {
+                if(confirm('¿Estás seguro de eliminar todos los registros?')) {
+                    logs = [];
+                    saveAndRefresh();
+                }
+            });
+
+            document.getElementById('tableSearchInput').addEventListener('input', (e) => {
+                renderLogs(e.target.value.toLowerCase());
+            });
+
+            document.getElementById('exportBackupBtn').addEventListener('click', exportBackup);
+            document.getElementById('printReportBtn').addEventListener('click', () => {
+                document.getElementById('printReportDate').textContent = `Fecha: ${new Date().toLocaleDateString('es-MX')}`;
+                window.print();
+            });
+
+            document.getElementById('getGpsBtn').addEventListener('click', fetchGpsLocation);
+            document.getElementById('evidenceFile').addEventListener('change', handleFileUpload);
+
+            document.getElementById('startTimerBtn').addEventListener('click', startStopwatch);
+            document.getElementById('stopTimerBtn').addEventListener('click', stopStopwatch);
+            document.getElementById('saveConfigBtn').addEventListener('click', saveInstitutionalConfig);
+        }
+
+        function addHoursToTimeString(timeStr, hoursToAdd) {
+            if (!timeStr) return '';
+            const [h, m] = timeStr.split(':').map(Number);
+            const date = new Date();
+            date.setHours(h + hoursToAdd, m, 0);
+            return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+        }
+
+        function calculateHoursFromTimes() {
+            const start = startTime.value;
+            const end = endTime.value;
+            if (!start || !end) return;
+
+            const [startH, startM] = start.split(':').map(Number);
+            const [endH, endM] = end.split(':').map(Number);
+
+            let startTotalMinutes = startH * 60 + startM;
+            let endTotalMinutes = endH * 60 + endM;
+
+            if (endTotalMinutes < startTotalMinutes) {
+                endTotalMinutes += 24 * 60;
+            }
+
+            const diffMinutes = endTotalMinutes - startTotalMinutes;
+            const exactHours = diffMinutes / 60;
+            calculatedHours.value = exactHours > 0 ? parseFloat(exactHours.toFixed(2)) : '';
+        }
+
+        function getCurrentTimeString() {
+            const now = new Date();
+            return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        }
+
+        function updateClockEstimatedEnd() {
+            if (clockStartTime.value) {
+                clockEstimatedEnd.textContent = addHoursToTimeString(clockStartTime.value, 4);
+            }
+        }
+
+        function handleFormSubmit(e) {
+            e.preventDefault();
+
+            const parsedHours = parseFloat(calculatedHours.value);
+            if (isNaN(parsedHours) || parsedHours <= 0) {
+                alert('Por favor ingresa un número válido de horas.');
+                return;
+            }
+
+            const isEditing = editingLogId.value !== '';
+
+            if (isEditing) {
+                const logIndex = logs.findIndex(item => item.id == editingLogId.value);
+                if (logIndex !== -1) {
+                    logs[logIndex] = {
+                        ...logs[logIndex],
+                        date: logDate.value,
+                        category: logCategory.value,
+                        startTime: startTime.value || '--:--',
+                        endTime: endTime.value || '--:--',
+                        hours: parsedHours,
+                        activities: logActivities.value.trim(),
+                        gps: document.getElementById('gpsData').value || logs[logIndex].gps,
+                        evidence: currentEvidenceBase64 || logs[logIndex].evidence
+                    };
+                }
+            } else {
+                const newLog = {
+                    id: Date.now(),
+                    date: logDate.value,
+                    category: logCategory.value,
+                    startTime: startTime.value || '--:--',
+                    endTime: endTime.value || '--:--',
+                    hours: parsedHours,
+                    activities: logActivities.value.trim(),
+                    gps: document.getElementById('gpsData').value || null,
+                    evidence: currentEvidenceBase64 || null
+                };
+                logs.unshift(newLog);
+            }
+
+            saveAndRefresh();
+            resetForm();
+        }
+
+        function editLog(id) {
+            switchView('dashboard');
+            const log = logs.find(item => item.id === id);
+            if (!log) return;
+
+            editingLogId.value = log.id;
+            logDate.value = log.date;
+            logCategory.value = log.category;
+            startTime.value = log.startTime !== '--:--' ? log.startTime : '';
+            endTime.value = log.endTime !== '--:--' ? log.endTime : '';
+            calculatedHours.value = log.hours;
+            logActivities.value = log.activities;
+
+            if (log.gps) {
+                document.getElementById('gpsData').value = log.gps;
+                document.getElementById('gpsStatus').textContent = 'GPS Guardado';
+            }
+
+            if (log.evidence) {
+                currentEvidenceBase64 = log.evidence;
+                document.getElementById('evidenceStatus').classList.remove('hidden');
+            } else {
+                currentEvidenceBase64 = '';
+                document.getElementById('evidenceStatus').classList.add('hidden');
+            }
+
+            formTitle.textContent = "Editar Registro";
+            formIcon.className = "fa-solid fa-pen text-amber-500";
+            editBadge.classList.remove('hidden');
+            cancelEditBtn.classList.remove('hidden');
+            submitBtnText.textContent = "Actualizar Registro";
+            submitBtnIcon.className = "fa-solid fa-arrows-rotate";
+
+            window.scrollTo({ top: entryForm.offsetTop - 80, behavior: 'smooth' });
+        }
+
+        function resetForm() {
+            editingLogId.value = '';
+            logActivities.value = '';
+            calculatedHours.value = '';
+            startTime.value = '';
+            endTime.value = '';
+            currentEvidenceBase64 = '';
+            
+            document.getElementById('evidenceStatus').classList.add('hidden');
+            document.getElementById('gpsStatus').textContent = 'Obtener GPS';
+            document.getElementById('gpsData').value = '';
+
+            formTitle.textContent = "Registrar Jornada / Horas Exactas";
+            formIcon.className = "fa-solid fa-pen-to-square text-sky-600";
+            editBadge.classList.add('hidden');
+            cancelEditBtn.classList.add('hidden');
+            submitBtnText.textContent = "Guardar Registro";
+            submitBtnIcon.className = "fa-solid fa-plus-circle";
+        }
+
+        function saveAndRefresh() {
+            localStorage.setItem('servicio_social_logs', JSON.stringify(logs));
+            updateCalculations();
+            renderLogs();
+            updateChart();
+            renderBadges();
+            renderCalendarHeatmap();
+        }
+
+        function updateCalculations() {
+            const totalCompleted = logs.reduce((sum, item) => sum + (parseFloat(item.hours) || 0), 0);
+            const remaining = Math.max(0, targetHours - totalCompleted);
+            const percent = Math.min(100, (totalCompleted / (targetHours || 1)) * 100);
+
+            completedHoursText.innerHTML = `${totalCompleted.toFixed(2)} <span class="text-xs font-normal text-slate-500">hrs</span>`;
+            remainingHoursText.innerHTML = `${remaining.toFixed(2)} <span class="text-xs font-normal text-slate-500">hrs</span>`;
+            progressPercentText.textContent = `${percent.toFixed(1)}%`;
+
+            document.getElementById('printTotalHours').textContent = `${totalCompleted.toFixed(2)} hrs`;
+
+            const count = logs.length;
+            const avg = count > 0 ? (totalCompleted / count) : 0;
+            const fullSessions = logs.filter(l => parseFloat(l.hours) >= 4.0).length;
+            const estDaysLeft = Math.ceil(remaining / 4);
+
+            document.getElementById('statAvgHours').textContent = `${avg.toFixed(2)} hrs`;
+            document.getElementById('statDaysWorked').textContent = `${count} días`;
+            document.getElementById('statFullSessions').textContent = `${fullSessions}`;
+            document.getElementById('statEstDaysLeft').textContent = `${estDaysLeft} días`;
+
+            const evidenceCount = logs.filter(l => l.evidence).length;
+            const badgeNav = document.getElementById('galleryBadgeNav');
+            if (evidenceCount > 0) {
+                badgeNav.textContent = evidenceCount;
+                badgeNav.classList.remove('hidden');
+            } else {
+                badgeNav.classList.add('hidden');
+            }
+        }
+
+        function renderLogs(filterText = '') {
+            logsTableBody.innerHTML = '';
+            printTableBody.innerHTML = '';
+
+            const filteredLogs = logs.filter(l => 
+                l.activities.toLowerCase().includes(filterText) ||
+                l.category.toLowerCase().includes(filterText) ||
+                l.date.includes(filterText)
+            );
+
+            if (filteredLogs.length === 0) {
+                logsTableBody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-slate-400">No hay horas registradas aún.</td></tr>`;
+                printTableBody.innerHTML = `<tr><td colspan="6" class="text-center py-4">Sin registros</td></tr>`;
+                return;
+            }
+
+            filteredLogs.forEach(log => {
+                const formattedHours = parseFloat(log.hours).toFixed(2);
+
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 dark:hover:bg-slate-800/50 transition';
+                tr.innerHTML = `
+                    <td class="py-2.5 px-3 font-medium">${log.date}</td>
+                    <td class="py-2.5 px-3">
+                        <span class="px-2 py-0.5 text-[10px] rounded-full bg-sky-100 dark:bg-sky-900/50 text-sky-700 dark:text-sky-300 font-semibold">
+                            ${log.category}
+                        </span>
+                    </td>
+                    <td class="py-2.5 px-3 text-slate-500">${log.startTime} - ${log.endTime}</td>
+                    <td class="py-2.5 px-3 text-right font-bold text-sky-600 dark:text-sky-400">${formattedHours} hrs</td>
+                    <td class="py-2.5 px-3 truncate max-w-xs" title="${log.activities}">${log.activities}</td>
+                    <td class="py-2.5 px-3 text-center">
+                        <div class="flex items-center justify-center gap-1.5">
+                            ${log.gps ? `<a href="https://maps.google.com/?q=${log.gps}" target="_blank" class="text-rose-500 hover:text-rose-600 text-xs" title="GPS: ${log.gps}"><i class="fa-solid fa-location-dot"></i></a>` : ''}
+                            ${log.evidence ? `<button onclick="switchView('gallery')" class="text-indigo-500 hover:text-indigo-600 text-xs" title="Ver en Galería"><i class="fa-solid fa-image"></i></button>` : ''}
+                            ${!log.gps && !log.evidence ? '<span class="text-slate-300">-</span>' : ''}
+                        </div>
+                    </td>
+                    <td class="py-2.5 px-3 text-center space-x-1">
+                        <button onclick="editLog(${log.id})" class="text-amber-500 hover:text-amber-700 p-1" title="Editar">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                        <button onclick="deleteLog(${log.id})" class="text-rose-500 hover:text-rose-700 p-1" title="Eliminar">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </td>
+                `;
+                logsTableBody.appendChild(tr);
+
+                const printTr = document.createElement('tr');
+                printTr.className = 'border-b border-slate-200';
+                printTr.innerHTML = `
+                    <td class="p-2 border-r">${log.date}</td>
+                    <td class="p-2 border-r">${log.category}</td>
+                    <td class="p-2 border-r">${log.startTime} - ${log.endTime}</td>
+                    <td class="p-2 border-r text-right font-bold">${formattedHours} hrs</td>
+                    <td class="p-2 border-r">${log.activities}</td>
+                    <td class="p-2 text-[10px] text-slate-500">${log.gps ? 'GPS OK' : ''} ${log.evidence ? 'Foto OK' : ''}</td>
+                `;
+                printTableBody.appendChild(printTr);
+            });
+        }
+
+        function renderFullGalleryView() {
+            const galleryContainer = document.getElementById('galleryFullGrid');
+            const counterText = document.getElementById('galleryCounterText');
+            galleryContainer.innerHTML = '';
+
+            const evidenceLogs = logs.filter(l => l.evidence);
+            counterText.textContent = `${evidenceLogs.length} Evidencias Adjuntas`;
+
+            if (evidenceLogs.length === 0) {
+                galleryContainer.innerHTML = `
+                    <div class="col-span-full text-center py-16 space-y-3">
+                        <i class="fa-solid fa-photo-film text-4xl text-slate-300"></i>
+                        <p class="text-slate-400 font-medium text-sm">No has adjuntado ninguna fotografía o evidencia todavía.</p>
+                        <button onclick="switchView('dashboard')" class="text-xs text-sky-600 font-bold hover:underline">Ir a la bitácora para agregar fotos</button>
+                    </div>
+                `;
+                return;
+            }
+
+            evidenceLogs.forEach(l => {
+                const card = document.createElement('div');
+                card.className = 'bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition flex flex-col justify-between';
+                card.innerHTML = `
+                    <div class="relative group">
+                        <img src="${l.evidence}" class="w-full h-48 object-cover">
+                        <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2">
+                            <button onclick="editLog(${l.id})" class="bg-white text-slate-900 p-2 rounded-full text-xs font-bold hover:bg-slate-100">
+                                <i class="fa-solid fa-pen"></i> Editar
+                            </button>
+                        </div>
+                    </div>
+                    <div class="p-4 space-y-2">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="font-bold text-sky-600 dark:text-sky-400">${l.date}</span>
+                            <span class="bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded text-[10px] font-bold">${l.hours} hrs</span>
+                        </div>
+                        <p class="text-xs text-slate-600 dark:text-slate-300 line-clamp-2">${l.activities}</p>
+                        ${l.gps ? `<p class="text-[10px] text-rose-500 font-medium flex items-center gap-1"><i class="fa-solid fa-location-dot"></i> GPS: ${l.gps}</p>` : ''}
+                    </div>
+                `;
+                galleryContainer.appendChild(card);
+            });
+        }
+
+        window.deleteLog = function(id) {
+            if(confirm('¿Eliminar este registro de horas?')) {
+                logs = logs.filter(item => item.id !== id);
+                saveAndRefresh();
+            }
+        };
+
+        // ================= SISTEMA DE CRONÓMETRO PERSISTENTE & ALERTAS =================
+        function startStopwatch() {
+            const nowTimestamp = Date.now();
+            
+            if (!timerData) {
+                let startTimeVal = clockStartTime.value;
+                let startTimestamp = nowTimestamp;
+
+                if (startTimeVal) {
+                    const [h, m] = startTimeVal.split(':').map(Number);
+                    const customDate = new Date();
+                    customDate.setHours(h, m, 0, 0);
+                    startTimestamp = customDate.getTime();
+                }
+
+                timerData = {
+                    startTime: startTimestamp,
+                    timeString: startTimeVal || getCurrentTimeString(),
+                    notified: false
+                };
+                
+                localStorage.setItem('servicio_social_timer', JSON.stringify(timerData));
+            }
+
+            document.getElementById('startTimerBtn').disabled = true;
+            document.getElementById('stopTimerBtn').disabled = false;
+
+            if (stopwatchInterval) clearInterval(stopwatchInterval);
+
+            stopwatchInterval = setInterval(updateTimerDisplay, 1000);
+            updateTimerDisplay();
+        }
+
+        function updateTimerDisplay() {
+            if (!timerData) return;
+
+            const now = Date.now();
+            stopwatchSeconds = Math.max(0, Math.floor((now - timerData.startTime) / 1000));
+
+            const hrs = Math.floor(stopwatchSeconds / 3600);
+            const mins = Math.floor((stopwatchSeconds % 3600) / 60);
+            const secs = stopwatchSeconds % 60;
+
+            const displayEl = document.getElementById('stopwatchDisplay');
+            displayEl.textContent = `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+            const decimalHours = (stopwatchSeconds / 3600).toFixed(2);
+            document.getElementById('stopwatchDecimal').textContent = `${decimalHours} hrs acumuladas`;
+
+            // ALERTA DE LAS 4 HORAS COMPLETADAS
+            if (stopwatchSeconds >= 14400) { // 14400 segundos = 4 horas
+                displayEl.classList.add('text-emerald-500');
+                
+                if (!timerData.notified) {
+                    timerData.notified = true;
+                    localStorage.setItem('servicio_social_timer', JSON.stringify(timerData));
+
+                    // Notificación en pantalla
+                    alert('🎉 ¡Felicidades! Has completado las 4 horas de tu jornada de servicio social.');
+
+                    // Notificación nativa del sistema (si el navegador la permite)
+                    if ("Notification" in window && Notification.permission === "granted") {
+                        new Notification("ServicioSocialPro", {
+                            body: "¡Has completado tus 4 horas reglamentarias de hoy!",
+                            icon: "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
+                        });
+                    }
+                }
+            } else {
+                displayEl.classList.remove('text-emerald-500');
+            }
+        }
+
+        function checkAndRestoreTimer() {
+            if (timerData && timerData.startTime) {
+                if (timerData.timeString) {
+                    clockStartTime.value = timerData.timeString;
+                    updateClockEstimatedEnd();
+                }
+                startStopwatch();
+            }
+        }
+
+        function stopStopwatch() {
+            clearInterval(stopwatchInterval);
+            stopwatchInterval = null;
+
+            document.getElementById('startTimerBtn').disabled = false;
+            document.getElementById('stopTimerBtn').disabled = true;
+
+            const totalDecimalHours = parseFloat((stopwatchSeconds / 3600).toFixed(2));
+            if (totalDecimalHours > 0) {
+                calculatedHours.value = totalDecimalHours;
+                if (clockStartTime.value) startTime.value = clockStartTime.value;
+                endTime.value = getCurrentTimeString();
+            }
+
+            localStorage.removeItem('servicio_social_timer');
+            timerData = null;
+            stopwatchSeconds = 0;
+
+            const displayEl = document.getElementById('stopwatchDisplay');
+            displayEl.textContent = '00:00:00';
+            displayEl.classList.remove('text-emerald-500');
+            document.getElementById('stopwatchDecimal').textContent = '0.00 hrs acumuladas';
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('hoursChart').getContext('2d');
+            hoursChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: getChartData(),
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+        }
+
+        function updateChart() {
+            if (!hoursChart) return;
+            hoursChart.data = getChartData();
+            hoursChart.update();
+        }
+
+        function getChartData() {
+            const categories = ['Presencial', 'Remoto', 'Campo / Evento', 'Investigación'];
+            const categorySums = categories.map(cat => {
+                return logs
+                    .filter(item => item.category === cat)
+                    .reduce((sum, item) => sum + parseFloat(item.hours), 0);
+            });
+
+            return {
+                labels: categories,
+                datasets: [{
+                    data: categorySums,
+                    backgroundColor: ['#0284c7', '#6366f1', '#10b981', '#f59e0b']
+                }]
+            };
+        }
+
+        function renderBadges() {
+            const totalHours = logs.reduce((sum, item) => sum + parseFloat(item.hours), 0);
+            const badges = [
+                { title: 'Primer Paso', hours: 1, icon: 'fa-shoe-prints', color: 'text-amber-500' },
+                { title: 'En Marcha', hours: 50, icon: 'fa-fire', color: 'text-orange-500' },
+                { title: 'Mitad Camino', hours: targetHours / 2, icon: 'fa-mountain', color: 'text-sky-500' },
+                { title: 'Meta Lograda', hours: targetHours, icon: 'fa-crown', color: 'text-emerald-500' }
+            ];
+
+            const container = document.getElementById('badgesContainer');
+            container.innerHTML = '';
+
+            badges.forEach(b => {
+                const unlocked = totalHours >= b.hours;
+                const badgeEl = document.createElement('div');
+                badgeEl.className = `p-2 rounded-xl flex flex-col items-center justify-center border ${unlocked ? 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm' : 'opacity-40 bg-slate-100 dark:bg-slate-800/30 border-transparent'}`;
+                badgeEl.innerHTML = `
+                    <i class="fa-solid ${b.icon} text-2xl ${unlocked ? b.color : 'text-slate-400'} mb-1"></i>
+                    <span class="text-[10px] font-bold truncate w-full">${b.title}</span>
+                    <span class="text-[9px] text-slate-400">${b.hours}h</span>
+                `;
+                container.appendChild(badgeEl);
+            });
+        }
+
+        function renderCalendarHeatmap() {
+            const grid = document.getElementById('calendarGrid');
+            grid.innerHTML = '';
+            
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth();
+            
+            document.getElementById('calendarMonthYear').textContent = new Date(year, month).toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
+
+            const firstDayIndex = new Date(year, month, 1).getDay() || 7;
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            for (let i = 1; i < firstDayIndex; i++) {
+                grid.appendChild(document.createElement('div'));
+            }
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const dayLogs = logs.filter(l => l.date === dayStr);
+                const dayHours = dayLogs.reduce((sum, l) => sum + parseFloat(l.hours), 0);
+
+                const dayEl = document.createElement('div');
+                dayEl.className = 'aspect-square rounded-lg flex items-center justify-center text-[10px] font-semibold border transition cursor-default';
+
+                if (dayHours >= 4) {
+                    dayEl.className += ' bg-emerald-500 text-white border-emerald-600 shadow-sm';
+                } else if (dayHours > 0) {
+                    dayEl.className += ' bg-sky-400 text-white border-sky-500';
+                } else {
+                    dayEl.className += ' bg-slate-100 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700 text-slate-400';
+                }
+
+                dayEl.textContent = day;
+                dayEl.title = `${dayStr}: ${dayHours.toFixed(2)} hrs`;
+                grid.appendChild(dayEl);
+            }
+        }
+
+        function fetchGpsLocation() {
+            const btnText = document.getElementById('gpsStatus');
+            if (!navigator.geolocation) {
+                alert('Geolocalización no soportada por el navegador.');
+                return;
+            }
+
+            btnText.textContent = 'Obteniendo...';
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    const coords = `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;
+                    document.getElementById('gpsData').value = coords;
+                    btnText.textContent = 'GPS Guardado';
+                },
+                () => { btnText.textContent = 'Error GPS'; }
+            );
+        }
+
+        function handleFileUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 600;
+                    const scaleSize = MAX_WIDTH / img.width;
+                    canvas.width = MAX_WIDTH;
+                    canvas.height = img.height * scaleSize;
+
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    currentEvidenceBase64 = canvas.toDataURL('image/jpeg', 0.7);
+
+                    document.getElementById('evidenceStatus').classList.remove('hidden');
+                };
+                img.src = evt.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function saveInstitutionalConfig() {
+            instConfig = {
+                name: document.getElementById('cfgStudentName').value,
+                id: document.getElementById('cfgStudentId').value,
+                program: document.getElementById('cfgProgram').value,
+                supervisor: document.getElementById('cfgSupervisor').value
+            };
+            localStorage.setItem('servicio_social_config', JSON.stringify(instConfig));
+            loadInstitutionalConfig();
+            alert('¡Configuración guardada correctamente!');
+            switchView('dashboard');
+        }
+
+        function loadInstitutionalConfig() {
+            document.getElementById('cfgStudentName').value = instConfig.name || '';
+            document.getElementById('cfgStudentId').value = instConfig.id || '';
+            document.getElementById('cfgProgram').value = instConfig.program || '';
+            document.getElementById('cfgSupervisor').value = instConfig.supervisor || '';
+
+            document.getElementById('printStudentName').textContent = instConfig.name || '______________________';
+            document.getElementById('printStudentId').textContent = instConfig.id || '______________________';
+            document.getElementById('printProgram').textContent = instConfig.program || '______________________';
+            
+            if (instConfig.name) {
+                document.getElementById('printSignatureStudent').textContent = `Firma: ${instConfig.name}`;
+            }
+            if (instConfig.supervisor) {
+                document.getElementById('printSignatureSupervisor').textContent = `Sello y Firma: ${instConfig.supervisor}`;
+            }
+        }
+
+        function updateLiveClock() {
+            const now = new Date();
+            document.getElementById('liveClock').textContent = now.toLocaleTimeString();
+        }
+
+        function exportBackup() {
+            const backupData = {
+                targetHours: targetHours,
+                config: instConfig,
+                logs: logs
+            };
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `ServicioSocial_Backup_${new Date().toISOString().split('T')[0]}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+    </script>
+</body>
+</html>
